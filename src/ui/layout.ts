@@ -12,19 +12,22 @@ export interface Rect {
 
 export interface Layout {
   mode: "wide" | "tall";
+  touch: boolean; // coarse pointer: bigger controls and tab targets
   header: Rect;
   battlefield: Rect;
   panel: Rect;
   tabs: Rect;
   tab_h: number;
+  row_h: number; // hero-row pitch
+  btn_h: number; // buy-button height
 }
 
 export const TABS = ["Company", "Patrons", "Gods", "Stats"] as const;
 
-export function compute_layout(w: number, h: number): Layout {
-  const header: Rect = { x: 0, y: 0, w, h: 52 };
+export function compute_layout(w: number, h: number, touch = false): Layout {
+  const header: Rect = { x: 0, y: 0, w, h: touch ? 56 : 52 };
   const wide = w >= 860;
-  const tab_h = 30;
+  const tab_h = touch ? 40 : 30;
   let battlefield: Rect;
   let panel: Rect;
   if (wide) {
@@ -32,12 +35,27 @@ export function compute_layout(w: number, h: number): Layout {
     battlefield = { x: pw, y: header.h, w: w - pw, h: h - header.h };
     panel = { x: 0, y: header.h, w: pw, h: h - header.h };
   } else {
-    const bh = Math.round(h * 0.46);
+    // Stacked: a short window must not starve the battlefield — floor it at
+    // 360 logical px (capped at 62% of height so the panel stays usable).
+    const bh = Math.max(
+      Math.round(h * 0.46),
+      Math.min(360, Math.round(h * 0.62)),
+    );
     battlefield = { x: 0, y: header.h, w, h: bh - header.h };
     panel = { x: 0, y: bh, w, h: h - bh };
   }
   const tabs: Rect = { x: panel.x + 8, y: panel.y + 6, w: panel.w - 16, h: tab_h };
-  return { mode: wide ? "wide" : "tall", header, battlefield, panel, tabs, tab_h };
+  return {
+    mode: wide ? "wide" : "tall",
+    touch,
+    header,
+    battlefield,
+    panel,
+    tabs,
+    tab_h,
+    row_h: touch ? 80 : 64,
+    btn_h: touch ? 44 : 24,
+  };
 }
 
 export function split_row(r: Rect, cols: number, gap = 6): Rect[] {

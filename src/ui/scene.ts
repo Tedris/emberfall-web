@@ -30,13 +30,14 @@ export class Scene {
   hits: { r: Rect; action: () => void }[] = [];
   floats: Floater[] = [];
   tab = 0;
+  touch = false; // set by main from (pointer: coarse)
   modal_dismissed = false;
   private monster: Rect = { x: 0, y: 0, w: 0, h: 0 };
   private last_gold = 0;
 
   draw(ctx: CanvasRenderingContext2D, game: Game, w: number, h: number, dt: number) {
     this.hits = [];
-    const L = compute_layout(w, h);
+    const L = compute_layout(w, h, this.touch);
     const s = game.state;
     ctx.clearRect(0, 0, w, h);
     this.header(ctx, game, L);
@@ -67,7 +68,8 @@ export class Scene {
     );
     // Rekindle button, center
     const bw = 190;
-    const r = { x: L.header.w / 2 - bw / 2, y: 8, w: bw, h: 36 };
+    const bh = L.touch ? 44 : 36;
+    const r = { x: L.header.w / 2 - bw / 2, y: (L.header.h - bh) / 2, w: bw, h: bh };
     const can = Souls.canRekindle(s);
     const gain = Souls.embersFromRun(s);
     this.button(
@@ -214,27 +216,31 @@ export class Scene {
         ctx,
         label,
         cells[i].x + cells[i].w / 2,
-        cells[i].y + 20,
+        cells[i].y + L.tab_h / 2 + 5,
         13,
         sel ? "#e8c46a" : "#9a917f",
       );
       this.hits.push({ r: cells[i], action: () => (this.tab = i) });
     });
     const body = { x: p.x + 8, y: L.tabs.y + L.tabs.h + 6, w: p.w - 16, h: p.h - L.tabs.h - 14 };
-    if (this.tab === 0) this.company(ctx, game, body);
-    else if (this.tab === 1) this.patrons(ctx, game, body);
+    if (this.tab === 0) this.company(ctx, game, body, L);
+    else if (this.tab === 1) this.patrons(ctx, game, body, L);
     else if (this.tab === 2) this.gods(ctx, game, body);
     else this.stats(ctx, game, body);
   }
 
-  private company(ctx: CanvasRenderingContext2D, game: Game, r: Rect) {
+  private company(ctx: CanvasRenderingContext2D, game: Game, r: Rect, L: Layout) {
     const s = game.state;
     const d = game.derived();
     const d_total = Effects.totalDps(s, d, s.overdrive_gauge);
     const visible = Config.HEROES.filter(
       (h) => s.heroes[h.id].hired || s.gold_ever >= h.cost0,
     );
-    const row_h = Math.min(64, r.h / Math.max(visible.length, 1));
+    // Touch/stacked layouts push buttons to a full-width strip under the
+    // name so tap targets keep a sane size at phone scale.
+    const tall = L.mode === "tall";
+    const row_h = Math.min(L.row_h, Math.max(56, r.h / Math.max(visible.length, 1)));
+    const btn_h = Math.min(L.btn_h, Math.max(30, row_h - 26));
     visible.forEach((h, i) => {
       const hs = s.heroes[h.id];
       const y = r.y + i * row_h;
@@ -242,16 +248,21 @@ export class Scene {
       // upgrade pips row first (small), then name + buttons
       this.text(ctx, h.name, row.x + 2, row.y + 15, 13, hs.hired ? "#e8e2d2" : "#8a8272", "left");
       const share = d_total > 0 ? (Effects.heroDps(s, h.id, d) / d_total) * 100 : 0;
-      this.text(
-        ctx,
-        hs.hired ? `Lv ${Format.number(hs.level)} · ${share.toFixed(0)}%` : `hire ${Format.number(h.cost0)}`,
-        row.x + 2,
-        row.y + 31,
-        11,
-        "#9a917f",
-        "left",
-      );
-      const br: Rect = { x: row.x + row.w - 208, y: row.y + 6, w: 208, h: 24 };
+      const meta = hs.hired
+        ? `Lv ${Format.number(hs.level)} · ${share.toFixed(0)}%`
+        : `hire ${Format.number(h.cost0)}`;
+      // Stacked rows keep one text line: name left, status left of the pips.
+      if (tall)
+        this.text(ctx, meta, row.x + row.w - 98, row.y + 15, 11, "#9a917f", "right");
+      else this.text(ctx, meta, row.x + 2, row.y + 31, 11, "#9a917f", "left");
+      const br: Rect = tall
+        ? { x: row.x + 2, y: row.y + row_h - btn_h - 2, w: row.w - 4, h: btn_h }
+        : {
+            x: row.x + row.w - 208,
+            y: row.y + Math.max(6, (row_h - btn_h) / 2),
+            w: 208,
+            h: btn_h,
+          };
       if (!hs.hired) {
         this.button(ctx, { ...br, x: br.x + br.w - 104 }, `HIRE`, s.gold >= h.cost0, () =>
           game.hire(h.id),
@@ -266,18 +277,21 @@ export class Scene {
           this.button(ctx, cells[k], label, s.gold >= cost, () =>
             game.buyLevels(h.id, Math.max(1, n)),
           );
-          this.text(
-            ctx,
-            Format.number(cost),
-            cells[k].x + cells[k].w / 2,
-            cells[k].y + cells[k].h + 11,
-            9,
-            s.gold >= cost ? "#a89f8a" : "#5f584c",
-          );
+          if (!tall)
+            this.text(
+              ctx,
+              Format.number(cost),
+              cells[k].x + cells[k].w / 2,
+              cells[k].y + cells[k].h + 11,
+              9,
+              s.gold >= cost ? "#a89f8a" : "#5f584c",
+            );
         });
       }
       // upgrade pips
-      const pip = { x: row.x + 2, y: row.y + row.h - 12, w: 18, h: 12 };
+      const pip = tall
+        ? { x: row.x + row.w - 94, y: row.y + 6, w: 18, h: 12 }
+        : { x: row.x + 2, y: row.y + row.h - 12, w: 18, h: 12 };
       Config.UPGRADE_TIERS.forEach((t, tier) => {
         const id = `${h.id}:${tier}`;
         const bought = !!s.upgrades_bought[id];
@@ -298,7 +312,12 @@ export class Scene {
       });
     });
     // Steward toggle at the panel foot
-    const foot: Rect = { x: r.x, y: r.y + r.h - 30, w: 220, h: 26 };
+    const foot: Rect = {
+      x: r.x,
+      y: r.y + r.h - (L.touch ? 40 : 30),
+      w: L.touch ? 280 : 220,
+      h: L.btn_h,
+    };
     const owned = s.steward;
     this.button(
       ctx,
@@ -309,12 +328,14 @@ export class Scene {
     );
   }
 
-  private patrons(ctx: CanvasRenderingContext2D, game: Game, r: Rect) {
+  private patrons(ctx: CanvasRenderingContext2D, game: Game, r: Rect, L: Layout) {
     const s = game.state;
     const offers = Patrons.offers(s);
     const sum_cost = Patrons.summonCost(s);
     this.text(ctx, `Summon (${Format.number(sum_cost)}✦) — reroll ${Format.number(Patrons.rerollCost(s))}✦`, r.x + 2, r.y + 14, 12, "#9a917f", "left");
-    const cards = split_row({ ...r, y: r.y + 24, h: 74 }, 4, 6);
+    const card_h = L.touch ? 92 : 74;
+    const ctl_h = L.touch ? 36 : 26;
+    const cards = split_row({ ...r, y: r.y + 24, h: card_h }, 4, 6);
     offers.forEach((id, i) => {
       const def = Config.PATRONS.find((p) => p.id === id)!;
       const c = cards[i];
@@ -323,22 +344,32 @@ export class Scene {
       ctx.fill();
       this.text(ctx, def.name, c.x + c.w / 2, c.y + 26, 14, "#e8c46a");
       this.text(ctx, def.epithet, c.x + c.w / 2, c.y + 44, 10, "#9a917f");
-      const buy: Rect = { x: c.x + 8, y: c.y + c.h - 26, w: c.w - 16, h: 20 };
+      const buy: Rect = {
+        x: c.x + 8,
+        y: c.y + c.h - (L.touch ? 44 : 26),
+        w: c.w - 16,
+        h: L.touch ? 36 : 20,
+      };
       this.button(ctx, buy, "SUMMON", s.embers >= sum_cost, () => game.summonPatron(id));
     });
-    const ctl = split_row({ x: r.x, y: r.y + 106, w: r.w, h: 26 }, 2, 6);
+    const ctl = split_row({ x: r.x, y: r.y + 34 + card_h, w: r.w, h: ctl_h }, 2, 6);
     this.button(ctx, ctl[0], "Reroll offers", s.embers >= Patrons.rerollCost(s), () => game.rerollOffers());
     this.button(ctx, ctl[1], "Respec (refund 75%)", true, () => game.respecPatrons());
 
     const owned = Object.entries(s.patrons).filter(([, l]) => l > 0);
-    let y = r.y + 142;
+    let y = r.y + 34 + card_h + ctl_h + 12;
     for (const [id, level] of owned) {
       const def = Config.PATRONS.find((p) => p.id === id)!;
-      const row: Rect = { x: r.x, y, w: r.w, h: 46 };
+      const row: Rect = { x: r.x, y, w: r.w, h: L.touch ? 58 : 46 };
       this.text(ctx, `${def.name} Lv ${Format.number(level)}`, row.x + 2, row.y + 15, 13, "#e8e2d2", "left");
       const ev = Patrons.effectValue(s, id);
       this.text(ctx, patronText(id, ev?.value ?? 0), row.x + 2, row.y + 31, 10, "#9a917f", "left");
-      const br = { x: row.x + row.w - 158, y: row.y + 10, w: 158, h: 24 };
+      const br = {
+        x: row.x + row.w - 158,
+        y: row.y + (L.touch ? 14 : 10),
+        w: 158,
+        h: L.touch ? 36 : 24,
+      };
       const cells = split_row(br, 3, 4);
       ([1, 10, "max"] as (number | "max")[]).forEach((step, k) => {
         const n = step === "max" ? Patrons.maxAffordable(s, id, s.embers) : step;
@@ -352,7 +383,7 @@ export class Scene {
         );
         this.text(ctx, Format.number(cost), cells[k].x + cells[k].w / 2, cells[k].y + cells[k].h + 10, 8, "#a89f8a");
       });
-      y += 50;
+      y += L.touch ? 62 : 50;
     }
   }
 

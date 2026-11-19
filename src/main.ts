@@ -20,8 +20,9 @@ let vh = 0;
 let scale = 1;
 
 function resize() {
-  const w = window.innerWidth;
-  const h = window.innerHeight;
+  // visualViewport tracks the on-screen viewport under mobile URL bars.
+  const w = window.visualViewport?.width ?? window.innerWidth;
+  const h = window.visualViewport?.height ?? window.innerHeight;
   const fit = fit_viewport(w, h);
   vw = fit.logical_w;
   vh = fit.logical_h;
@@ -29,9 +30,17 @@ function resize() {
   const dpr = window.devicePixelRatio || 1;
   canvas.width = Math.round(w * dpr);
   canvas.height = Math.round(h * dpr);
+  canvas.style.width = `${w}px`;
+  canvas.style.height = `${h}px`;
   ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
 }
 window.addEventListener("resize", resize);
+window.visualViewport?.addEventListener("resize", resize);
+
+// Coarse pointer (phones/tablets) -> big-control layout.
+const coarse = window.matchMedia("(pointer: coarse)");
+coarse.addEventListener?.("change", () => (scene.touch = coarse.matches));
+scene.touch = coarse.matches;
 resize();
 
 let last = performance.now();
