@@ -1,0 +1,93 @@
+// Integration pacing guard: the tuning must keep the run moving. These
+// thresholds are the contract from docs/DESIGN.md — if a rebalance breaks the
+// first-act curve, this test fails loudly. Sim time, not wall time.
+
+import { describe, expect, it } from "vitest";
+import { createState } from "../src/state";
+import Effects from "../src/systems/effects";
+import Combat from "../src/systems/combat";
+import Heroes from "../src/systems/heroes";
+import Souls from "../src/systems/souls";
+import Clicker from "../src/systems/clicker";
+
+function simulate(
+  minutes: number,
+  active: boolean,
+  rekindleAt = 0,
+  log = false,
+): { maxZone: number; rekindles: number; s: ReturnType<typeof createState> } {
+  const s = createState();
+  s.steward = true;
+  const step = 0.25;
+  const total = minutes * 60;
+  let maxZone = 1;
+  let rekindles = 0;
+  let rng = 0;
+  const marks: Record<string, number> = {};
+  for (let t = 0; t < total; t += step) {
+    for (const id of Object.keys(s.heroes)) {
+      if (!s.heroes[id].hired && Heroes.canSee(s, id)) Heroes.hire(s, id);
+    }
+    Heroes.stewardTick(s);
+    if (active) {
+      // 10 clicks/s through the real click path (gauge + crit), and a present
+      // player also levels Tinder by hand — the steward skips him on purpose.
+      const d = Effects.derive(s);
+      Heroes.buy(
+        s,
+        "tinder",
+        Heroes.maxAffordable("tinder", s.heroes["tinder"].level, s.gold),
+      );
+      for (let c = 0; c < 2; c++)
+        Clicker.click(
+          s,
+          d,
+          () =>
+            (rng = (Math.imul(rng, 1664525) + 1013904223) >>> 0) / 4294967296,
+          true,
+        );
+    }
+    Combat.tick(s, step);
+    maxZone = Math.max(maxZone, s.zone);
+    if (rekindleAt > 0 && s.zone >= rekindleAt) {
+      if (Souls.rekindle(s) > 0) {
+        rekindles++;
+        maxZone = 1;
+      }
+    }
+    for (const [label, at] of [
+      ["5m", 300],
+      ["10m", 600],
+      ["20m", 1200],
+      ["30m", 1800],
+      ["60m", 3600],
+    ] as const) {
+      if (Math.abs(t - at) < step / 2) marks[label] = maxZone;
+    }
+  }
+  if (log) console.log(active ? "active" : "idle", marks);
+  return { maxZone, rekindles, s };
+}
+
+describe("pacing", () => {
+  it("reaches ~zone 20 within 10 minutes and 45 within an hour (idle+steward)", () => {
+    const { maxZone } = simulate(10, false, 0, true);
+    expect(maxZone).toBeGreaterThanOrEqual(20);
+    const { maxZone: mz2 } = simulate(60, false);
+    expect(mz2).toBeGreaterThanOrEqual(45);
+  });
+
+  it("a present player (10 cps + Tinder levels) is meaningfully faster early", () => {
+    const idle = simulate(6, false).maxZone;
+    const active = simulate(6, true).maxZone;
+    expect(active).toBeGreaterThan(idle + 2);
+  });
+
+  it("ascending from a 45-zone hour pays Embers and stays finite", () => {
+    const { s, rekindles } = simulate(60, false, 45);
+    expect(rekindles).toBeGreaterThan(0);
+    expect(s.embers_lifetime).toBeGreaterThanOrEqual(1);
+    expect(Number.isFinite(s.gold)).toBe(true);
+    expect(Number.isFinite(s.monster_max_hp)).toBe(true);
+  });
+});

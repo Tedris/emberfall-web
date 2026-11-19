@@ -1,0 +1,19 @@
+{
+  "name": "emberfall-web",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Emberfall — an original idle clicker. TypeScript + Canvas, playable in desktop and mobile browsers.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.3",
+    "typescript": "^5.6.0",
+    "vite": "^6.0.0",
+    "vitest": "^2.1.0"
+  }
+}
