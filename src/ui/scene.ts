@@ -33,6 +33,7 @@ export class Scene {
   touch = false; // set by main from (pointer: coarse)
   info_hero: string | null = null; // expanded hero row
   help_open = false;
+  private reset_armed_t = 0; // performance.now() of first reset tap
   modal_dismissed = false;
   private monster: Rect = { x: 0, y: 0, w: 0, h: 0 };
   private last_gold = 0;
@@ -236,7 +237,7 @@ export class Scene {
     if (this.tab === 0) this.company(ctx, game, body, L);
     else if (this.tab === 1) this.patrons(ctx, game, body, L);
     else if (this.tab === 2) this.gods(ctx, game, body);
-    else this.stats(ctx, game, body);
+    else this.stats(ctx, game, body, L);
   }
 
   private company(ctx: CanvasRenderingContext2D, game: Game, r: Rect, L: Layout) {
@@ -486,7 +487,7 @@ export class Scene {
     }
   }
 
-  private stats(ctx: CanvasRenderingContext2D, game: Game, r: Rect) {
+  private stats(ctx: CanvasRenderingContext2D, game: Game, r: Rect, L: Layout) {
     const s = game.state;
     const rows = [
       ["Best zone", Format.number(s.best_zone)],
@@ -502,6 +503,30 @@ export class Scene {
       const y = r.y + 18 + i * 26;
       this.text(ctx, k as string, r.x + 2, y, 13, "#9a917f", "left");
       this.text(ctx, v as string, r.x + r.w - 2, y, 13, "#e8e2d2", "right");
+    });
+    // Utility foot: manual save + two-tap hard reset (dev/QA friendly).
+    const armed = performance.now() - this.reset_armed_t < 5000;
+    const foot: Rect = {
+      x: r.x,
+      y: r.y + r.h - (L.touch ? 44 : 34),
+      w: r.w,
+      h: L.btn_h,
+    };
+    const cells = split_row(foot, 2, 8);
+    this.button(ctx, cells[0], "Save now", true, () => {
+      game.saveNow();
+      game.toast("Saved");
+    });
+    this.button(ctx, cells[1], armed ? "Really wipe EVERYTHING?" : "Reset", true, () => {
+      if (armed) {
+        game.hardReset();
+        this.reset_armed_t = 0;
+        this.tab = 0;
+        this.info_hero = null;
+        game.toast("A fresh ember");
+      } else {
+        this.reset_armed_t = performance.now();
+      }
     });
   }
 

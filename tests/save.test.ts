@@ -4,6 +4,7 @@ import { createState } from "../src/state";
 import Save from "../src/systems/save";
 import Offline from "../src/systems/offline";
 import Heroes from "../src/systems/heroes";
+import Game from "../src/game";
 
 class FakeStorage {
   map = new Map<string, string>();
@@ -98,5 +99,25 @@ describe("offline", () => {
     expect(rep!.stuck_at).not.toBeNull();
     expect(s.zone).toBe(9); // farmed below the wall, never lower
     expect(rep!.gold).toBeGreaterThan(0);
+  });
+});
+
+describe("hard reset", () => {
+  it("wipes meta and run, and survives a reload", () => {
+    const st = new FakeStorage();
+    let now = 1000;
+    const game = new Game(st, () => now);
+    game.state.zone = 77;
+    game.state.embers = 900;
+    game.state.patrons["vessa"] = 4;
+    game.state.gold_ever = 5e6;
+    game.hardReset();
+    const reloaded = new Game(st, () => now).state;
+    expect(reloaded.zone).toBe(1);
+    expect(reloaded.embers).toBe(0);
+    expect(reloaded.patrons["vessa"]).toBeUndefined();
+    expect(reloaded.gold_ever).toBe(createState().gold_ever); // starter seed
+    expect(reloaded.heroes["tinder"].hired).toBe(true);
+    expect(reloaded.heroes["cinderroot"].hired).toBe(true);
   });
 });

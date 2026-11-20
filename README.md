@@ -11,6 +11,15 @@ Open `index.html` via any static server (`npm run dev`, or `npm run build`
 and serve `dist/`). Progress lives in `localStorage`; offline gains are
 simulated on return (capped, with a report).
 
+## Save & reset
+
+- Autosaves every few seconds, on tab-hide, and on close. Offline progress is
+  simulated on return (capped, with a report).
+- Stats tab: **Save now** (force a write) and **Reset** (two-tap confirm wipes
+  run *and* meta and persists the blank slate) — handy during testing.
+- Console equivalents: `game.saveNow()`, `game.hardReset()` (`window.game` is
+  exposed in the page, dev and prod alike).
+
 ## Commands
 
 - `npm test` - run the Vitest suite (systems logic + pacing guards)

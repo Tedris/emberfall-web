@@ -162,6 +162,15 @@ export class Game {
     return this.save.save(this.state);
   }
 
+  // Dev/QA lever: wipe meta and run alike, then persist the blank slate so a
+  // reload can't resurrect the old game from backup.
+  hardReset() {
+    this.state = createState(this.now_fn());
+    this.state.last_save_time = this.now_fn();
+    this.session.offline_report = null;
+    this.save.save(this.state);
+  }
+
   toast(msg: string) {
     this.session.toasts.push({ msg, t: 5 });
     if (this.session.toasts.length > 4) this.session.toasts.shift();
