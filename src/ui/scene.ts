@@ -578,7 +578,7 @@ export class Scene {
 
   // ── input ──────────────────────────────────────────────────────────────
   // Returns true when a UI hit or monster click consumed the press.
-  pointer(x: number, y: number, game: Game): "ui" | "monster" | "gauge" {
+  pointer(x: number, y: number, game: Game): "ui" | "monster" {
     for (let i = this.hits.length - 1; i >= 0; i--) {
       if (in_rect(x, y, this.hits[i].r)) {
         this.hits[i].action();
@@ -598,9 +598,8 @@ export class Scene {
         });
       return "monster";
     }
-    // click anywhere else still feeds the gauge
-    game.click(false);
-    return "gauge";
+    // anywhere else is a whiff: no damage, no momentum
+    return "ui";
   }
 }
 

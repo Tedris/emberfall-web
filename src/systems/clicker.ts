@@ -22,11 +22,12 @@ export const Clicker = {
     onMonster: boolean,
   ): ClickResult {
     const gmax = Config.OVERDRIVE_MAX + d.overdrive_max;
+    if (!onMonster) return { damage: 0, crit: false, landed: false };
+    // Only blows that reach the enemy build momentum.
     state.overdrive_gauge = Math.min(
       gmax,
       state.overdrive_gauge + Config.OVERDRIVE_GAIN * d.overdrive_gain,
     );
-    if (!onMonster) return { damage: 0, crit: false, landed: false };
 
     const dps = Effects.totalDps(state, d, state.overdrive_gauge);
     let damage = Effects.clickDamage(state, d, dps);

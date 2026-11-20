@@ -63,7 +63,7 @@ describe("combat", () => {
 });
 
 describe("clicker", () => {
-  it("fills the gauge even off-target but only damages on the monster", () => {
+  it("off-target taps whiff entirely; only monster hits feed Overdrive", () => {
     const s = armed();
     const d = Effects.derive(s);
     Combat.spawn(s, d);
@@ -71,10 +71,11 @@ describe("clicker", () => {
     const off = Clicker.click(s, d, () => 0.99, false);
     expect(off.landed).toBe(false);
     expect(s.monster_hp).toBe(hp);
-    expect(s.overdrive_gauge).toBeGreaterThan(0);
+    expect(s.overdrive_gauge).toBe(0);
     const on = Clicker.click(s, d, () => 0.99, true);
     expect(on.landed).toBe(true);
     expect(s.monster_hp).toBeLessThan(hp);
+    expect(s.overdrive_gauge).toBeGreaterThan(0);
   });
 
   it("crits apply the crit multiplier", () => {
