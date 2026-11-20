@@ -78,7 +78,7 @@ const Config = {
   ],
 
   // ── curves ─────────────────────────────────────────────────────────────
-  HP_BASE: 10,
+  HP_BASE: 16,
   HP_EARLY_MAX: 140, // zones ≤ this use the steep curve + linear term
   HP_GROWTH_EARLY: 1.55,
   HP_LINEAR_PER_ZONE: 10,
@@ -89,6 +89,8 @@ const Config = {
   HP_OLD_GROWTH_LATE: 1.15,
 
   GOLD_HP_DIV: 6,
+  GOLD_EARLY_SLOPE: 0.05, // pre-act gold boost: 1 + slope·(end − zone)
+  GOLD_EARLY_END: 40,
   GOLD_FACTOR_RATE: 1.025,
   GOLD_FACTOR_FROM: 75,
   GOLD_FACTOR_CAP: 3,
@@ -126,9 +128,14 @@ const Config = {
   ],
 
   // ── clicking ───────────────────────────────────────────────────────────
+  // Early clicks add a fixed slice of home-zone monster HP, decaying by zone:
+  // taps carry the first ~10 zones, then automation takes over. Boss HP is
+  // normalized so clicking a boss can't one-tap its way past a wall.
   CLICK_BASE: 1,
   CLICK_PER_TINDER_LEVEL: 2,
   CLICK_DPS_SHARE: 0.005, // 0.5% of DPS rides on each click
+  CLICK_HP_FRAC0: 0.05, // click adds 5% of (home-zone) HP at zone 0…
+  CLICK_HP_FRAC_DECAY: 0.82, // …× 0.82 per zone → negligible past ~15
   CRIT_CHANCE: 0.05,
   CRIT_MULT: 7,
 
@@ -182,9 +189,9 @@ const Config = {
   // ── content: heroes (hire ladder anchored ~8× gold at home zone, DPS
   //    anchored to 5% of home-zone monster HP; see DESIGN.md) ─────────────
   HEROES: [
-    { id: "tinder", name: "Tinder the Errand-Child", blurb: "Carries kindling, hits things with it.", cost0: 5, dps0: 1.05 },
-    { id: "cinderroot", name: "Cinderroot", blurb: "A stump that remembered being a forest fire.", cost0: 52.77, dps0: 9.772 },
-    { id: "soot", name: "Soot the Chimney Rat", blurb: "Stabs from inside flues. Regrettable hygiene.", cost0: 254.7, dps0: 41.32 },
+    { id: "tinder", name: "Tinder the Errand-Child", blurb: "Carries kindling, hits things with it.", cost0: 5, dps0: 0.7 },
+    { id: "cinderroot", name: "Cinderroot", blurb: "A stump that remembered being a forest fire.", cost0: 52.77, dps0: 4.4 },
+    { id: "soot", name: "Soot the Chimney Rat", blurb: "Stabs from inside flues. Regrettable hygiene.", cost0: 254.7, dps0: 23 },
     { id: "copperjack", name: "Copperjack of the Road", blurb: "Highwayman. Leaves receipts.", cost0: 2317, dps0: 311.1 },
     { id: "mothwife", name: "The Mothwife", blurb: "Married the lantern. Widowed by the dark.", cost0: 3.787e4, dps0: 4152 },
     { id: "bryn", name: "Ash-Hound Bryn", blurb: "Tracks monsters by the smell of their fear.", cost0: 1.623e6, dps0: 1.377e5 },

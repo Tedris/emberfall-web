@@ -50,7 +50,11 @@ Hero upgrades: 4 tiers each at levels 10/25/50/100, cost `c0·{10, 100, 1e3, 1e4
 +100% hero DPS, +5% global DPS, +100% hero DPS, hero signature (one-off effect).
 
 Damage channels: `DPS = Σ hero` base · milestones · upgrades · globals`. Click =
-`1 + 2·TinderLevel` + 0.5% of DPS, ×click multipliers; crit 5% for ×7.
+`1 + 2·TinderLevel` + 0.5% of DPS + `5%·0.82^zone` of home-zone HP (bosses
+normalized), ×click multipliers; crit 5% for ×7. That HP slice makes the first
+~10 zones tap-driven — early heroes are deliberately weak so tapping matters,
+then it decays to noise and automation takes over. Gold carries the slower
+start via an early taper (`×(1 + 0.05·(40−zone))`, gone by zone 40).
 
 ### Overdrive (improvement #1: gentle active bonus)
 

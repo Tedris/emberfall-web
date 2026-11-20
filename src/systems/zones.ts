@@ -78,7 +78,10 @@ export const Zones = {
           )
         : 1;
     const base = (Zones.hpOld(z) / C.GOLD_HP_DIV) * factor;
-    return isBoss ? base * 10 : base;
+    // Early-game taper: slower first-act kills pay proportionally more so
+    // idle tempo holds while taps carry the fighting.
+    const early = 1 + Math.max(0, C.GOLD_EARLY_SLOPE * (C.GOLD_EARLY_END - z));
+    return isBoss ? base * early * 10 : base * early;
   },
 
   killsNeeded(z: number, minus: number): number {

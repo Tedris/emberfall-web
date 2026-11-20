@@ -217,7 +217,13 @@ export const Effects = {
     const tinder = state.heroes["tinder"];
     let flat = Config.CLICK_BASE;
     if (tinder?.hired) flat += Config.CLICK_PER_TINDER_LEVEL * tinder.level;
-    return (flat + d.click_dps_share * dps) * d.click_dmg;
+    // Early-game slice of home-zone HP so taps matter before automation;
+    // boss HP normalized so a boss can't be tickled to death.
+    const frac =
+      Config.CLICK_HP_FRAC0 * Math.pow(Config.CLICK_HP_FRAC_DECAY, state.zone);
+    const ref =
+      state.monster_max_hp / (state.monster_is_boss ? Config.BOSS_HP_MULT : 1);
+    return (flat + d.click_dps_share * dps + frac * ref) * d.click_dmg;
   },
 
   // Convenience for UI: sum of one effect kind across upgrades/patrons.
