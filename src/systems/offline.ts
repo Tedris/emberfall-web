@@ -29,6 +29,26 @@ export const Offline = {
     const dps = Effects.totalDps(state, d, 0);
     const report: OfflineReport = { seconds: budget, gold: 0, zones: 0, kills: 0, stuck_at: null };
     if (dps <= 0) return report;
+    // The road holds while you sleep: with auto-advance off nothing advances
+    // offline — you farm the zone you are standing on, at the same rate you
+    // would with the tab open. Standing on an uncleared boss zone means that
+    // boss beat you, so the neighbours one zone back are what pay.
+    if (!state.auto_advance) {
+      const farm_z =
+        Zones.isBossZone(state.zone) && !state.zone_cleared
+          ? Math.max(1, state.zone - 1)
+          : state.zone;
+      const cycle = Zones.monsterHp(farm_z, false) / dps + Zones.respawnDelay(d.respawn);
+      const held_kills = Math.floor(budget / cycle);
+      const held_gold = held_kills * Zones.goldFor(farm_z, false) * d.gold;
+      state.gold += held_gold;
+      state.gold_earned_run += held_gold;
+      if (state.gold > state.gold_ever) state.gold_ever = state.gold;
+      state.kills += held_kills;
+      report.gold = held_gold;
+      report.kills = held_kills;
+      return report;
+    }
 
     let t = budget;
     let z = state.zone;

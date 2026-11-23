@@ -52,6 +52,8 @@ export class Game {
     const ev = Combat.tick(s, dt, d);
     if (ev.revenant_souls) this.toast(`Revenant falls: +${ev.revenant_souls} Embers`);
     if (ev.boss_failed) this.toast("The boss holds the road. Farm and grow.");
+    if (ev.zone_cleared)
+      this.toast(`Zone ${ev.zone_cleared} cleared — hold here, or go deeper`);
     if (this.save.update(dt, s) === false && this.save.dirty) {
       this.session.save_warning = true;
     } else {
@@ -71,6 +73,32 @@ export class Game {
     const res = Clicker.click(s, d, this.click_rng, onMonster);
     this.save.markDirty();
     return res;
+  }
+
+  // ── the road ───────────────────────────────────────────────────────────
+  travel(zone: number): boolean {
+    const ok = Combat.travel(this.state, zone);
+    if (ok) this.save.markDirty();
+    return ok;
+  }
+
+  goDeeper(): boolean {
+    const ok = Combat.goDeeper(this.state);
+    if (ok) {
+      this.save.markDirty();
+      this.toast(`Deeper: zone ${this.state.zone}`);
+    }
+    return ok;
+  }
+
+  // Progress mode on = the road walks on by itself; off = every cleared zone
+  // waits for the player. Nothing else ever flips this.
+  setAutoAdvance(on: boolean) {
+    const s = this.state;
+    s.auto_advance = on;
+    if (on) Combat.goDeeper(s); // was holding at a cleared zone: walk on now
+    this.save.markDirty();
+    return on;
   }
 
   hire(id: string) {
@@ -109,6 +137,7 @@ export class Game {
     if (s.steward || s.embers < Config.STEWARD_COST) return false;
     s.embers -= Config.STEWARD_COST;
     s.steward = true;
+    this.setAutoAdvance(true); // buying the Steward means hands-off: it walks
     this.save.markDirty();
     return true;
   }

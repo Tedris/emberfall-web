@@ -28,6 +28,11 @@ export interface GameState {
   boss_timer: number; // countdown while boss alive
   streak_letdown: boolean; // failed a boss once → farming mode
 
+  // the road: where you stand, and whether it moves on its own
+  frontier_zone: number; // highest zone reached this run; travel opens to here
+  zone_cleared: boolean; // quota done; going deeper is the player's call
+  auto_advance: boolean; // progress mode: a cleared zone advances unasked
+
   // heroes & upgrades
   heroes: Record<string, HeroState>;
   upgrades_bought: Record<string, true>;
@@ -81,27 +86,31 @@ export interface SessionState {
 export function createState(now = 0): GameState {
   const heroes: Record<string, HeroState> = {};
   for (const h of HERO_IDS) heroes[h] = { level: 0, hired: false };
-  // The Company starts assembled so an idle-only player can never softlock.
-  heroes["tinder"] = { level: 1, hired: true };
-  heroes["cinderroot"] = { level: 1, hired: true };
+  // The first-ever run stands alone: no hired damage, so the first monster
+  // falls to taps or not at all. A Rekindling is the warm restart — see
+  // resetRun in systems/souls.ts, where the Company comes back assembled so an
+  // idle-only player can never soft-lock.
   return {
     save_version: 1,
     last_save_time: null,
     play_time: 0,
-    gold: 5,
+    gold: 0,
     gold_earned_run: 0,
     zone: 1,
     kills_in_zone: 0,
-    monster_hp: 10,
-    monster_max_hp: 10,
+    monster_hp: 0, // 0 = "no monster standing": the first tick spawns one at
+    monster_max_hp: 0, // the real zone-1 HP instead of a hardcoded guess
     monster_is_boss: false,
     monster_primal: false,
     respawn_timer: 0,
     boss_timer: 0,
     streak_letdown: false,
+    frontier_zone: 1,
+    zone_cleared: false,
+    auto_advance: false, // a new run is asked at every cleared zone
     heroes,
     upgrades_bought: {},
-    gold_ever: 5,
+    gold_ever: 0, // the hire ladder reveals itself as gold is actually earned
     embers: 0,
     embers_lifetime: 0,
     embers_spent_run: 0,

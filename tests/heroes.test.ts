@@ -5,19 +5,25 @@ import Heroes from "../src/systems/heroes";
 import Effects from "../src/systems/effects";
 
 describe("heroes", () => {
-  it("company starts hired; further heroes reveal by gold_ever", () => {
+  it("a first run starts alone; heroes reveal as gold is earned", () => {
     const s = createState();
-    expect(s.heroes["tinder"].hired).toBe(true);
-    expect(s.heroes["cinderroot"].hired).toBe(true);
-    expect(Heroes.canSee(s, "soot")).toBe(false);
+    expect(s.heroes["tinder"].hired).toBe(false);
+    expect(s.heroes["cinderroot"].hired).toBe(false);
+    // Nobody has hired damage, so taps are the only damage there is.
+    expect(Effects.totalDps(s, Effects.derive(s))).toBe(0);
+    expect(Heroes.canSee(s, "tinder")).toBe(false);
+    s.gold = 5; // the first kill's payout
+    s.gold_ever = 5;
+    expect(Heroes.canSee(s, "tinder")).toBe(true);
+    expect(Heroes.hire(s, "tinder")).toBe(true);
+    // Tinder is the click child: hiring him adds no autonomous damage, only
+    // weight behind the player's own taps.
+    expect(Effects.totalDps(s, Effects.derive(s))).toBe(0);
+    expect(Effects.clickDamage(s, Effects.derive(s), 0)).toBeGreaterThan(Config.CLICK_BASE);
     s.gold = 1000;
     s.gold_ever = 1000;
     expect(Heroes.canSee(s, "soot")).toBe(true);
     expect(Heroes.canSee(s, "vey")).toBe(false);
-    const gold0 = s.gold;
-    expect(Heroes.hire(s, "soot")).toBe(true);
-    expect(s.gold).toBeLessThan(gold0);
-    expect(s.heroes["soot"].hired).toBe(true);
   });
 
   it("level cost is the geometric sum and MAX matches it", () => {
@@ -31,6 +37,7 @@ describe("heroes", () => {
   it("levels bought count toward rekindle embers", () => {
     const s = createState();
     s.gold = 1e9;
+    Heroes.hire(s, "cinderroot");
     expect(Heroes.buy(s, "cinderroot", 100)).toBeGreaterThan(0);
     expect(s.levels_bought_run).toBe(100);
   });
@@ -45,6 +52,8 @@ describe("heroes", () => {
 
   it("buy fails when gold short and never goes negative", () => {
     const s = createState();
+    s.gold = 1e9;
+    Heroes.hire(s, "cinderroot");
     s.gold = 0;
     expect(Heroes.buy(s, "cinderroot", 10)).toBe(0);
     expect(s.heroes["cinderroot"].level).toBe(1);
@@ -65,6 +74,8 @@ describe("heroes", () => {
 describe("effects", () => {
   it("unspent embers multiply DPS", () => {
     const s = createState();
+    s.gold = 1e9;
+    Heroes.hire(s, "cinderroot");
     const dps1 = Effects.totalDps(s, Effects.derive(s));
     expect(dps1).toBeGreaterThan(0);
     s.embers = 10;
@@ -73,6 +84,8 @@ describe("effects", () => {
 
   it("overdrive arms past the threshold", () => {
     const s = createState();
+    s.gold = 1e9;
+    Heroes.hire(s, "cinderroot");
     const d = Effects.derive(s);
     const calm = Effects.totalDps(s, d, 0);
     const hot = Effects.totalDps(s, d, Config.OVERDRIVE_MAX);
@@ -81,6 +94,8 @@ describe("effects", () => {
 
   it("click damage includes share of DPS", () => {
     const s = createState();
+    s.gold = 1e9;
+    Heroes.hire(s, "cinderroot");
     s.heroes["cinderroot"].level = 100;
     const d = Effects.derive(s);
     const dps = Effects.totalDps(s, d);
@@ -89,6 +104,9 @@ describe("effects", () => {
 
   it("upgrade tiers multiply hero and global damage", () => {
     const s = createState();
+    s.gold = 1e9;
+    Heroes.hire(s, "tinder");
+    Heroes.hire(s, "cinderroot");
     const d0 = Effects.derive(s);
     const base = Effects.totalDps(s, d0);
     s.upgrades_bought["cinderroot:0"] = true;

@@ -64,10 +64,12 @@ describe("offline", () => {
   function simmed() {
     const s = createState();
     s.gold_ever = 1e12;
+    s.gold = 1e6;
     Heroes.hire(s, "cinderroot");
     s.heroes["cinderroot"].level = 40;
     s.gold = 12345;
     s.last_save_time = 1000;
+    s.auto_advance = true; // the zone ladder is progress mode
     return s;
   }
 
@@ -83,6 +85,15 @@ describe("offline", () => {
     expect(rep!.gold).toBeGreaterThan(0);
     expect(s.gold).toBeGreaterThan(12345);
     expect(s.zone).toBeGreaterThan(1);
+  });
+
+  it("a held road farms gold without moving the zone", () => {
+    const s = simmed();
+    s.auto_advance = false; // the player chose to hold here
+    const rep = Offline.apply(s, 1000 + 3600);
+    expect(rep!.gold).toBeGreaterThan(0);
+    expect(rep!.zones).toBe(0);
+    expect(s.zone).toBe(1);
   });
 
   it("caps at OFFLINE_CAP_HOURS", () => {
@@ -117,7 +128,9 @@ describe("hard reset", () => {
     expect(reloaded.embers).toBe(0);
     expect(reloaded.patrons["vessa"]).toBeUndefined();
     expect(reloaded.gold_ever).toBe(createState().gold_ever); // starter seed
-    expect(reloaded.heroes["tinder"].hired).toBe(true);
-    expect(reloaded.heroes["cinderroot"].hired).toBe(true);
+    expect(reloaded.heroes["tinder"].hired).toBe(false); // a fresh ember: alone
+    expect(reloaded.heroes["cinderroot"].hired).toBe(false);
+    expect(reloaded.frontier_zone).toBe(1);
+    expect(reloaded.auto_advance).toBe(false); // asked at every cleared zone
   });
 });

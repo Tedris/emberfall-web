@@ -32,6 +32,7 @@ export class Scene {
   tab = 0;
   touch = false; // set by main from (pointer: coarse)
   info_hero: string | null = null; // expanded hero row
+  road_page = 0; // zone-list page in the Road panel (0 = deepest)
   help_open = false;
   private reset_armed_t = 0; // performance.now() of first reset tap
   modal_dismissed = false;
@@ -159,7 +160,7 @@ export class Scene {
       this.text(ctx, "…", cx, my, 26, "#6a6455");
     }
 
-    // kill counter
+    // zone status, in one strip under the zone label
     const d = game.derived();
     const need = Zones.killsNeeded(s.zone, d.zone_kills);
     if (!s.monster_is_boss) {
@@ -168,7 +169,29 @@ export class Scene {
       this.text(ctx, dots, b.x + b.w / 2, b.y + 46, 13, "#e8c46a");
     }
     if (s.streak_letdown)
-      this.text(ctx, "held at the wall — farm, grow, return", b.x + b.w / 2, b.y + b.h - 60, 13, "#b0876a");
+      this.text(ctx, "held at the wall — farm, grow, return", b.x + b.w / 2, b.y + 64, 13, "#b0876a");
+
+    // two things the player may need telling: fight, or choose
+    if (Effects.totalDps(s, d, s.overdrive_gauge) <= 0) {
+      this.text(
+        ctx,
+        "TAP THE MONSTER — nobody holds the road but you",
+        b.x + b.w / 2,
+        b.y + b.h - 92,
+        14,
+        "#e8c46a",
+      );
+    }
+    if (s.zone_cleared) {
+      const pw = Math.min(280, b.w - 32);
+      this.button(
+        ctx,
+        { x: b.x + (b.w - pw) / 2, y: b.y + b.h - 84, w: pw, h: L.touch ? 44 : 34 },
+        "ZONE CLEARED → GO DEEPER",
+        true,
+        () => game.goDeeper(),
+      );
+    }
 
     // overdrive gauge
     const gmax = Config.OVERDRIVE_MAX + d.overdrive_max;
@@ -235,8 +258,9 @@ export class Scene {
     );
     const body = { x: p.x + 8, y: L.tabs.y + L.tabs.h + 6, w: p.w - 16, h: p.h - L.tabs.h - 14 };
     if (this.tab === 0) this.company(ctx, game, body, L);
-    else if (this.tab === 1) this.patrons(ctx, game, body, L);
-    else if (this.tab === 2) this.gods(ctx, game, body);
+    else if (this.tab === 1) this.road(ctx, game, body, L);
+    else if (this.tab === 2) this.patrons(ctx, game, body, L);
+    else if (this.tab === 3) this.gods(ctx, game, body);
     else this.stats(ctx, game, body, L);
   }
 
@@ -261,9 +285,13 @@ export class Scene {
       // upgrade pips row first (small), then name + buttons
       this.text(ctx, h.name, row.x + 2, row.y + 15, 13, hs.hired ? "#e8e2d2" : "#8a8272", "left");
       const share = d_total > 0 ? (Effects.heroDps(s, h.id, d) / d_total) * 100 : 0;
-      const meta = hs.hired
-        ? `Lv ${Format.number(hs.level)} · ${share.toFixed(0)}%`
-        : `hire ${Format.number(h.cost0)}`;
+      // Tinder has no DPS of his own — he sells taps, so say that instead of
+      // showing a flat "0%".
+      const own =
+        h.id === "tinder"
+          ? `+${Format.number(Config.CLICK_PER_TINDER_LEVEL * hs.level)} on taps`
+          : `${share.toFixed(0)}%`;
+      const meta = hs.hired ? `Lv ${Format.number(hs.level)} · ${own}` : `hire ${Format.number(h.cost0)}`;
       // Stacked rows keep one text line: name left, status left of the pips.
       if (tall)
         this.text(ctx, meta, row.x + row.w - 98, row.y + 15, 11, "#9a917f", "right");
@@ -278,12 +306,14 @@ export class Scene {
         const up = Heroes.upgrades().find(
           (u) => u.hero === h.id && !s.upgrades_bought[u.id],
         );
+        const power =
+          h.id === "tinder"
+            ? `Adds ${Format.number(Config.CLICK_PER_TINDER_LEVEL * hs.level)} to every tap`
+            : `Deals ${Format.number(Effects.heroDps(s, h.id, d))} DPS`;
         const info = !hs.hired
           ? `Hire for ${Format.number(h.cost0)} — your taps carry the road until then.`
-          : `Deals ${Format.number(Effects.heroDps(s, h.id, d))} DPS · next: ${
-              up
-                ? `${up.effect_text || up.name} @ Lv ${up.unlock_level}`
-                : "fully upgraded"
+          : `${power} · next: ${
+              up ? `${up.effect_text || up.name} @ Lv ${up.unlock_level}` : "fully upgraded"
             }`;
         this.text(ctx, info, row.x + 2, dy + (tall ? 13 : 12), 10, "#9a917f", "left");
       }
@@ -344,6 +374,17 @@ export class Scene {
       });
       yy = row.y + row_h + extra;
     });
+    if (visible.length === 0) {
+      this.text(ctx, "Nobody holds the road but you.", r.x + r.w / 2, r.y + 40, 14, "#e8c46a");
+      this.text(
+        ctx,
+        "Tap the monster — gold from the first kills hires the Company.",
+        r.x + r.w / 2,
+        r.y + 62,
+        12,
+        "#9a917f",
+      );
+    }
     // Steward toggle at the panel foot
     const foot: Rect = {
       x: r.x,
@@ -361,19 +402,121 @@ export class Scene {
     );
   }
 
+  // The Road: where you stand, what standing here pays, and whether the road
+  // walks on without you. Clicker Heroes locks its farm/progress choice behind
+  // zone 100 and never lets you pick a zone; this one is open from zone 1, and
+  // holding is safe by construction — a held zone spawns no timed boss.
+  private road(ctx: CanvasRenderingContext2D, game: Game, r: Rect, L: Layout) {
+    const s = game.state;
+    const d = game.derived();
+    const row_h = L.touch ? 44 : 26;
+    const need = Zones.killsNeeded(s.zone, d.zone_kills);
+    this.text(ctx, `Zone ${s.zone} · ${Zones.biome(s.zone).name}`, r.x + 2, r.y + 14, 13, "#e8e2d2", "left");
+    this.text(ctx, `deepest ${Format.number(s.frontier_zone)}`, r.x + r.w - 2, r.y + 14, 12, "#9a917f", "right");
+
+    // the two decisions, the biggest thing on the panel
+    const decide = split_row({ x: r.x, y: r.y + 22, w: r.w, h: row_h }, 2, 6);
+    this.button(ctx, decide[0], "GO DEEPER →", s.zone_cleared, () => game.goDeeper());
+    this.button(
+      ctx,
+      decide[1],
+      s.auto_advance ? "Auto-advance: ON" : "Auto-advance: OFF",
+      true,
+      () => game.setAutoAdvance(!s.auto_advance),
+    );
+
+    let y = r.y + 22 + row_h + 14;
+    this.text(
+      ctx,
+      s.zone_cleared
+        ? "Zone cleared. The road holds here — farm on, or go deeper."
+        : `Kill ${need} here to clear the zone (${Math.min(s.kills_in_zone, need)}/${need}).`,
+      r.x + 2,
+      y,
+      11,
+      s.zone_cleared ? "#e8c46a" : "#9a917f",
+      "left",
+    );
+    y += 16;
+    // What standing here pays: farming should be arithmetic, not folklore.
+    const cycle =
+      Zones.monsterHp(s.zone, false) /
+        Math.max(Effects.totalDps(s, d, s.overdrive_gauge), 1e-300) +
+      Zones.respawnDelay(d.respawn);
+    this.text(
+      ctx,
+      `≈ ${Format.number((Zones.goldFor(s.zone, false) * d.gold * 3600) / cycle)} gold/h here`,
+      r.x + 2,
+      y,
+      11,
+      "#9a917f",
+      "left",
+    );
+    y += 10;
+
+    const step = split_row({ x: r.x, y, w: r.w, h: row_h }, 3, 6);
+    this.button(ctx, step[0], `◀ ${Math.max(1, s.zone - 1)}`, s.zone > 1, () =>
+      game.travel(s.zone - 1),
+    );
+    this.button(ctx, step[1], "deepest", s.zone < s.frontier_zone, () =>
+      game.travel(s.frontier_zone),
+    );
+    this.button(ctx, step[2], `${Math.min(s.frontier_zone, s.zone + 1)} ▶`, s.zone < s.frontier_zone, () =>
+      game.travel(s.zone + 1),
+    );
+    y += row_h + 8;
+
+    // …or jump straight to any zone you have reached. ★ marks a boss zone:
+    // 10× gold, and past zone 100 it may be holding a Revenant.
+    const cols = L.touch ? 4 : 6;
+    const cell_h = L.touch ? 40 : 26;
+    const reserve = L.touch ? 46 : 32;
+    const rows = Math.max(0, Math.min(3, Math.floor((r.y + r.h - y - reserve) / (cell_h + 4))));
+    if (rows === 0) return;
+    const span = cols * rows;
+    const page = Math.min(this.road_page, Math.max(0, Math.floor((s.frontier_zone - 1) / span)));
+    const hi = s.frontier_zone - page * span;
+    const lo = Math.max(1, hi - span + 1);
+    const cell_w = r.w / cols;
+    for (let i = 0; i < span; i++) {
+      const z = lo + i;
+      if (z > hi) break;
+      const cell: Rect = {
+        x: r.x + (i % cols) * cell_w,
+        y: y + Math.floor(i / cols) * (cell_h + 4),
+        w: cell_w - 4,
+        h: cell_h,
+      };
+      const here = z === s.zone;
+      this.button(
+        ctx,
+        cell,
+        `${z}${Zones.isBossZone(z) ? " ★" : ""}${here ? " •" : ""}`,
+        !here,
+        () => game.travel(z),
+      );
+    }
+    const nav = split_row(
+      { x: r.x, y: y + rows * (cell_h + 4) + 2, w: r.w, h: L.touch ? 36 : 24 },
+      2,
+      6,
+    );
+    this.button(ctx, nav[0], "‹ deeper zones", page > 0, () => (this.road_page = page - 1));
+    this.button(ctx, nav[1], "earlier zones ›", lo > 1, () => (this.road_page = page + 1));
+  }
+
   private help(ctx: CanvasRenderingContext2D, w: number, h: number) {
     ctx.fillStyle = "rgba(8, 7, 6, 0.88)";
     ctx.fillRect(0, 0, w, h);
     this.text(ctx, "How Emberfall works", w / 2, h / 2 - 100, 17, "#e8c46a");
     const lines = [
-      "Monsters die to damage: your Company's DPS — and your taps.",
-      "Early zones: TAP the monster — clicks hit for a slice of health,",
-      "and that slice fades with the zone. Fight while new, then idle.",
-      "Gold buys Levels (damage) and Upgrades (the pips).",
-      "Tap a hero's name for what he does and what's next for him.",
-      "Bosses guard every 5th zone: farm, return when stronger.",
+      "Your taps kill the first monsters — nobody is hired yet.",
+      "Gold hires the Company: heroes add DPS of their own, and every",
+      "tap keeps landing a slice of health that fades deeper in.",
+      "Levels buy damage, the pips buy multipliers. Tap a name for more.",
+      "Bosses guard every 5th zone: 30s, or the road sets you back one.",
+      "The Road tab: revisit any zone you reached, hold to farm, or auto.",
       "Rekindle (top) burns the run for Embers — the real currency.",
-      "Spend Embers on Patrons. The Steward buys while you're away.",
     ];
     lines.forEach((t, i) =>
       this.text(ctx, t, w / 2, h / 2 - 64 + i * 22, 12, "#cfc8b8"),

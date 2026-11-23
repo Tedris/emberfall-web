@@ -11,14 +11,23 @@ Open `index.html` via any static server (`npm run dev`, or `npm run build`
 and serve `dist/`). Progress lives in `localStorage`; offline gains are
 simulated on return (capped, with a report).
 
+- The first run starts with **nobody hired**: the first monsters fall to taps,
+  and that gold hires the Company. (After a Rekindling the Company restarts
+  assembled, so idle play never dead-ends.)
+- **Road** tab: travel to any zone you have reached, see what standing there
+  pays, and choose between *hold* (keep farming the cleared zone) and *go
+  deeper*. `Auto-advance` is yours to set — the game never changes it under
+  you, and holding a zone can never set you back a zone.
+
 ## Save & reset
 
 - Autosaves every few seconds, on tab-hide, and on close. Offline progress is
   simulated on return (capped, with a report).
 - Stats tab: **Save now** (force a write) and **Reset** (two-tap confirm wipes
   run *and* meta and persists the blank slate) — handy during testing.
-- Console equivalents: `game.saveNow()`, `game.hardReset()` (`window.game` is
-  exposed in the page, dev and prod alike).
+- Console equivalents: `game.saveNow()`, `game.hardReset()`,
+  `game.travel(12)`, `game.goDeeper()`, `game.setAutoAdvance(true)`
+  (`window.game` is exposed in the page, dev and prod alike).
 
 ## Commands
 

@@ -21,8 +21,16 @@ them is the Godsfall, the last reset.
 - A single monster stands on the road at zone `z`. Heroes deal DPS; the player
   clicks to add click damage. Kills drop gold, auto-collected (no mouse-chase —
   improvement over coin-swiping).
+- The first-ever run opens alone: nobody hired, 0 DPS. The first monster falls
+  to taps or nothing stays dead, and gold from those kills buys the first hire.
+  A Rekindled run restarts warm instead — the Company comes back assembled.
+- The road is somewhere you choose to be. Clearing a zone either walks on
+  (progress mode) or holds: the same monsters keep paying gold until the player
+  says go deeper. Any zone reached this run is travelable (Road panel).
 - Normal zone: 10 kills. Boss zone every 5th zone: 1 monster, 10× HP, 30 s
   timer. Timeout pushes you back one zone. Fail once: progress resets to farm.
+  A held zone spawns no timed boss — its boss is already dead — so choosing to
+  farm can never be the thing that sets you back (CH1's farm-mode footgun).
 - 0.5 s respawn delay after each kill → floor on clear speed (this pacing
   matters; keep it).
 - Gold buys hero levels. Level cost `c0 · 1.07^n`. Level damage is flat, but
@@ -50,11 +58,14 @@ Hero upgrades: 4 tiers each at levels 10/25/50/100, cost `c0·{10, 100, 1e3, 1e4
 +100% hero DPS, +5% global DPS, +100% hero DPS, hero signature (one-off effect).
 
 Damage channels: `DPS = Σ hero` base · milestones · upgrades · globals`. Click =
-`1 + 2·TinderLevel` + 0.5% of DPS + `5%·0.82^zone` of home-zone HP (bosses
-normalized), ×click multipliers; crit 5% for ×7. That HP slice makes the first
-~10 zones tap-driven — early heroes are deliberately weak so tapping matters,
-then it decays to noise and automation takes over. Gold carries the slower
-start via an early taper (`×(1 + 0.05·(40−zone))`, gone by zone 40).
+`4 + 2·TinderLevel` + 0.5% of DPS + `5%·0.82^zone` of home-zone HP (bosses
+normalized), ×click multipliers; crit 5% for ×7. CLICK_BASE 4 is the whole
+damage budget of a fresh run — about 4 taps per zone-1 monster, which is the
+opening: your thumb, then the Company. Tinder has `dps0 = 0`: he is the click
+child, so the first hire changes your taps before any hero adds real DPS. The
+HP slice keeps taps relevant through the first act, then decays to noise and
+automation takes over. Gold carries the slower start via an early taper
+(`×(1 + 0.05·(40−zone))`, gone by zone 40).
 
 ### Overdrive (improvement #1: gentle active bonus)
 
@@ -74,9 +85,10 @@ Attentive play ≈ +25%, idle untouched. No combo micro-management, no timer str
 - Unspent Embers: +10% DPS each. Rekindle available at zone ≥ 30, button on main
   screen (improvement: CH1 hides it in a hero upgrade at 1.9e19 gold; ours is a
   panel with predicted Ember gain — discovering prestige shouldn't need a wiki).
-- Keeps: Embers, Patrons, best records. Wipes: gold/heroes/zone — but the
-  Company restarts assembled (Tinder + Cinderroot, Lv 1) so an idle-only
-  player can never soft-lock on a fresh run.
+- Keeps: Embers, Patrons, best records, the auto-advance preference. Wipes:
+  gold/heroes/zone/frontier — but the Company restarts assembled (Tinder +
+  Cinderroot, Lv 1), so an idle-only player can never soft-lock *after* a
+  Rekindling. Only the first-ever run is the cold start with taps alone.
 
 ## Patrons (ancients analogue, meta decisions)
 
@@ -127,8 +139,16 @@ income exponential so it never stops mattering. Godsfall keeps: Marks, gods.
    hero level each tick (cheapest next milestone first), and buys unlocked
    hero upgrades. Kills the genre's most tedious busywork.
 5. Offline: full zone-ladder simulation (not flat income), capped 24 h, with a
-   report; mirrors CH1's per-zone offline sim.
+   report; mirrors CH1's per-zone offline sim. A road you chose to hold is held
+   offline too: gold from the zone you are standing on, zero zones advanced.
 6. Numbers honest: no paywall, no ads, no energy. Save = localStorage.
+7. Zone select and a real hold/continue choice, from zone 1. CH1 locks its
+   farm-vs-progress toggle behind zone 100, gives no way back except failing a
+   boss, and switches progress mode off on you when a timer expires. Ours:
+   travel to any zone you reached, the zone's `≈gold/h` printed so farming is
+   arithmetic instead of folklore, holding can never set you back, and nothing
+   flips the mode but the player — except the Steward, which is the explicit
+   hands-off purchase.
 
 ## Not building (scope walls — the old project's mistake, revisited)
 

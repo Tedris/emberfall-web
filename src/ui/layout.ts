@@ -22,7 +22,7 @@ export interface Layout {
   btn_h: number; // buy-button height
 }
 
-export const TABS = ["Company", "Patrons", "Gods", "Stats"] as const;
+export const TABS = ["Company", "Road", "Patrons", "Gods", "Stats"] as const;
 
 export function compute_layout(w: number, h: number, touch = false): Layout {
   const header: Rect = { x: 0, y: 0, w, h: touch ? 56 : 52 };

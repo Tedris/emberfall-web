@@ -128,10 +128,13 @@ const Config = {
   ],
 
   // ── clicking ───────────────────────────────────────────────────────────
-  // Early clicks add a fixed slice of home-zone monster HP, decaying by zone:
-  // taps carry the first ~10 zones, then automation takes over. Boss HP is
-  // normalized so clicking a boss can't one-tap its way past a wall.
-  CLICK_BASE: 1,
+  // A run opens with nobody on the road: taps are the only damage there is, so
+  // CLICK_BASE alone has to fell the first monsters in a handful of taps.
+  // On top of the flat hit, clicks add a slice of home-zone HP that decays by
+  // zone, so taps stay relevant for the first act and fade to noise once the
+  // Company is fighting. Boss HP is normalized so clicking can't one-tap a
+  // wall.
+  CLICK_BASE: 4,
   CLICK_PER_TINDER_LEVEL: 2,
   CLICK_DPS_SHARE: 0.005, // 0.5% of DPS rides on each click
   CLICK_HP_FRAC0: 0.05, // click adds 5% of (home-zone) HP at zone 0…
@@ -186,10 +189,13 @@ const Config = {
   LAYOUT_MIN_WIDTH: 480,
   LAYOUT_MIN_HEIGHT: 540,
 
+  // ── the road (travel + hold) ───────────────────────────────────────────
+  ROAD_WINDOW: 12, // zones per page in the Road panel's zone list
+
   // ── content: heroes (hire ladder anchored ~8× gold at home zone, DPS
   //    anchored to 5% of home-zone monster HP; see DESIGN.md) ─────────────
   HEROES: [
-    { id: "tinder", name: "Tinder the Errand-Child", blurb: "Carries kindling, hits things with it.", cost0: 5, dps0: 0.7 },
+    { id: "tinder", name: "Tinder the Errand-Child", blurb: "Carries kindling, hits things with it.", cost0: 5, dps0: 0 },
     { id: "cinderroot", name: "Cinderroot", blurb: "A stump that remembered being a forest fire.", cost0: 52.77, dps0: 4.4 },
     { id: "soot", name: "Soot the Chimney Rat", blurb: "Stabs from inside flues. Regrettable hygiene.", cost0: 254.7, dps0: 23 },
     { id: "copperjack", name: "Copperjack of the Road", blurb: "Highwayman. Leaves receipts.", cost0: 2317, dps0: 311.1 },

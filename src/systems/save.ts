@@ -92,6 +92,11 @@ export class Save {
     }
     state.patrons = typeof s.patrons === "object" && s.patrons ? { ...(s.patrons as object) } as GameState["patrons"] : {};
     state.gods = typeof s.gods === "object" && s.gods ? { ...(s.gods as object) } as GameState["gods"] : {};
+    // Road fields predate this save: an older game always auto-advanced, and
+    // had by definition walked every zone up to the one it stands on.
+    state.frontier_zone = Math.max(state.frontier_zone, state.zone);
+    if (typeof s.auto_advance !== "boolean") state.auto_advance = true;
+    if (typeof s.zone_cleared !== "boolean") state.zone_cleared = false;
     return { state, saved_at: parsed.t ?? null, from_backup, fresh: false };
   }
 

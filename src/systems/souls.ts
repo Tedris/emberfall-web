@@ -81,13 +81,15 @@ export function resetRun(state: GameState) {
   state.gold_earned_run = 0;
   state.zone = 1;
   state.kills_in_zone = 0;
-  state.monster_hp = 10;
-  state.monster_max_hp = 10;
+  state.monster_hp = 0; // no monster standing; the next tick spawns zone 1's
+  state.monster_max_hp = 0;
   state.monster_is_boss = false;
   state.monster_primal = false;
   state.respawn_timer = 0;
   state.boss_timer = 0;
   state.streak_letdown = false;
+  state.frontier_zone = 1; // the road is new again; auto_advance is a
+  state.zone_cleared = false; // preference and deliberately survives
   state.levels_bought_run = 0;
   state.revenant_souls_run = 0;
   state.revenant_beaten = {};
@@ -96,8 +98,10 @@ export function resetRun(state: GameState) {
     hs.level = 0;
     hs.hired = false;
   }
-  // The Company restarts assembled (Tinder + Cinderroot, Lv 1) — an
-  // idle-only player can never soft-lock after a Rekindling.
+  // A Rekindling is the warm restart, unlike the very first run: the Company
+  // comes back assembled (Tinder + Cinderroot, Lv 1) so an idle-only player
+  // can never soft-lock here. Tinder hits for nothing on his own — his levels
+  // buy tap damage — so the opening beats still land in the player's hands.
   state.heroes["tinder"] = { level: 1, hired: true };
   state.heroes["cinderroot"] = { level: 1, hired: true };
   state.upgrades_bought = {};
