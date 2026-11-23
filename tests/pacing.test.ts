@@ -80,11 +80,11 @@ function simulate(
 }
 
 describe("pacing", () => {
-  it("reaches ~zone 20 within 10 minutes and 45 within an hour (idle+steward)", () => {
+  it("a hands-off run walks to ~zone 10 in ten minutes and ~34 in an hour (idle+steward)", () => {
     const { maxZone } = simulate(10, false, 0, true);
-    expect(maxZone).toBeGreaterThanOrEqual(20);
+    expect(maxZone).toBeGreaterThanOrEqual(10);
     const { maxZone: mz2 } = simulate(60, false);
-    expect(mz2).toBeGreaterThanOrEqual(45);
+    expect(mz2).toBeGreaterThanOrEqual(30);
   });
 
   it("a present player (10 cps + Tinder levels) is meaningfully faster early", () => {
@@ -93,10 +93,11 @@ describe("pacing", () => {
     expect(active).toBeGreaterThan(idle + 2);
   });
 
-  it("ascending from a 45-zone hour pays Embers and stays finite", () => {
-    const { s, rekindles } = simulate(60, false, 45);
+  it("a hands-off six hours reaches the Rekindle gate and gets paid new ground", () => {
+    const { s, rekindles } = simulate(360, false, 60);
     expect(rekindles).toBeGreaterThan(0);
-    expect(s.embers_lifetime).toBeGreaterThanOrEqual(1);
+    // floor(60 / EMBER_ZONE_DIVISOR) of new ground, plus the level term
+    expect(s.embers_lifetime).toBeGreaterThanOrEqual(5);
     expect(Number.isFinite(s.gold)).toBe(true);
     expect(Number.isFinite(s.monster_max_hp)).toBe(true);
   });

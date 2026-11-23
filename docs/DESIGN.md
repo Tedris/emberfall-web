@@ -27,8 +27,12 @@ them is the Godsfall, the last reset.
 - The road is somewhere you choose to be. Clearing a zone either walks on
   (progress mode) or holds: the same monsters keep paying gold until the player
   says go deeper. Any zone reached this run is travelable (Road panel).
-- Normal zone: 10 kills. Boss zone every 5th zone: 1 monster, 10× HP, 30 s
-  timer. Timeout pushes you back one zone. Fail once: progress resets to farm.
+- Normal zone: 10 kills, +0.1 per 500 zones (depth gets denser, not only
+  fatter). Boss zone every 5th zone: 1 monster, 10× HP, 30 s timer (−2 s per
+  500 zones). A failed boss drops the road back to the deepest ground that
+  still dies in 2 s and walks forward from there: the wall holds the zone until
+  DPS grows, and the gold that buys that DPS keeps flowing. Fail once: progress
+  resets to farm.
   A held zone spawns no timed boss — its boss is already dead — so choosing to
   farm can never be the thing that sets you back (CH1's farm-mode footgun).
 - 0.5 s respawn delay after each kill → floor on clear speed (this pacing
@@ -46,7 +50,7 @@ cur(L) = 10·1.55^(L−1) + 10(L−1)        L ≤ 140
 cur(L) = cur(140)·1.145^(L−140)         L > 140, growth +0.001 per 500 zones past 500
 old(L) = (10·1.6^(min(L,140)−1) + 10(min(L,140)−1)) · 1.15^max(L−140,0)
 bossHP = HP · max(10·(1+0.04⌊L/500⌋) − Bubos-like, 5)
-gold(kill) = old(L)/12 · zoneFactor, zoneFactor = min(1.025^(L−74), 3) for L ≥ 75, else 1
+gold(kill) = old(L)/15 · zoneFactor · early, zoneFactor = min(1.025^(L−74), 3) for L ≥ 75, else 1
 ```
 
 Doubles only (no big-decimal for v1): caps near zone ~3,500 pre-Godsfall —
@@ -64,8 +68,17 @@ damage budget of a fresh run — about 4 taps per zone-1 monster, which is the
 opening: your thumb, then the Company. Tinder has `dps0 = 0`: he is the click
 child, so the first hire changes your taps before any hero adds real DPS. The
 HP slice keeps taps relevant through the first act, then decays to noise and
-automation takes over. Gold carries the slower start via an early taper
-(`×(1 + 0.05·(40−zone))`, gone by zone 40).
+automation takes over. Gold is `old/15`, the reference game's divisor: gold per
+monster HP *is* the difficulty dial, and at `/6` on top of an early taper
+(`×(1 + 0.05·(40−zone))`, gone by zone 40) the first act ran ~7× better funded
+than CH1 and nothing ever took more than ~2 s to die.
+
+Measured tempo (deterministic sims, Steward on, auto-advance on): hands-off
+10 min → zone 10, 1 h → zone 34, 6 h → zone 60, which is the Rekindle gate; the
+same hour with a thumb on the glass (8 taps/s plus Tinder levels) → zone 40. A
+wall slows a hands-off run to roughly a zone an hour instead of stopping it —
+CH1's curve is slower still, and it stops dead unless the player chooses to
+walk backwards and farm.
 
 ### Overdrive (improvement #1: gentle active bonus)
 
@@ -75,16 +88,18 @@ Attentive play ≈ +25%, idle untouched. No combo micro-management, no timer str
 ## Prestige layer 1 — Rekindling (run, minutes–days)
 
 - Spend: gold, hero levels/upgrades, zone → gain Embers.
-- `embers = max(1, ⌊heroLevelsBought/1000⌋ + revenantSouls)` — a Rekindling
-  always pays at least one Ember, so the first meta beat lands before any
-  Revenant falls.
+- `embers = ⌊heroLevelsBought/1000⌋ + revenantSouls + ⌊newGround/12⌋`, where
+  newGround is the run's frontier past the deepest zone Embers have already
+  paid for (`paid_zone`). Ground already burned never pays twice, so
+  Rekindling stays a bet on going deeper, not a lever to pull in place.
 - Revenant bosses: boss zone ≥ 100, first clear of the run, chance
   `max(25 − 2⌊ascensions/500⌋, 5)%` (100/110/120 + every 100th always).
   `reward(L) = ⌊((n+4)/5)^1.3⌋ · (1 + patron/god bonuses)`, n = (L−100)/5.
   Seeded per run → reroll-resistant saves.
-- Unspent Embers: +10% DPS each. Rekindle available at zone ≥ 30, button on main
-  screen (improvement: CH1 hides it in a hero upgrade at 1.9e19 gold; ours is a
-  panel with predicted Ember gain — discovering prestige shouldn't need a wiki).
+- Unspent Embers: +10% DPS each. Rekindle available at zone ≥ 60 *and* only
+  while it would pay something (button on the main screen: CH1 hides prestige
+  in a hero upgrade at 1.9e19 gold; ours shows the predicted Ember gain —
+  discovering prestige shouldn't need a wiki).
 - Keeps: Embers, Patrons, best records, the auto-advance preference. Wipes:
   gold/heroes/zone/frontier — but the Company restarts assembled (Tinder +
   Cinderroot, Lv 1), so an idle-only player can never soft-lock *after* a
@@ -149,6 +164,9 @@ income exponential so it never stops mattering. Godsfall keeps: Marks, gods.
    arithmetic instead of folklore, holding can never set you back, and nothing
    flips the mode but the player — except the Steward, which is the explicit
    hands-off purchase.
+8. A failed boss re-homes the run to ground it can still kill instead of
+   grinding against a timer at zero income. CH1 leaves that to the player and
+   punishes the ones who have not learned to farm backwards.
 
 ## Not building (scope walls — the old project's mistake, revisited)
 

@@ -7,11 +7,20 @@ import type { GameState } from "../state";
 import { hash2, mulberry32, nextSeed } from "./rng";
 
 export const Souls = {
-  // Embers this run would pay right now.
+  // Embers this run would pay right now: levels bought, Revenant Embers, and
+  // one per EMBER_ZONE_DIVISOR zones of ground that is new since the last
+  // Rekindle. Re-walking a road you already burned pays nothing, so Rekindling
+  // stays a bet on going deeper rather than a lever you can pull in place.
   embersFromRun(state: GameState): number {
+    const newGround = Math.max(
+      0,
+      Math.floor(state.frontier_zone / Config.EMBER_ZONE_DIVISOR) -
+        Math.floor(state.paid_zone / Config.EMBER_ZONE_DIVISOR),
+    );
     return (
       Math.floor(state.levels_bought_run / Config.EMBER_LEVEL_DIVISOR) +
-      state.revenant_souls_run
+      state.revenant_souls_run +
+      newGround
     );
   },
 
@@ -57,19 +66,20 @@ export const Souls = {
   },
 
   canRekindle(state: GameState): boolean {
-    return state.zone >= Config.REKINDLE_MIN_ZONE;
+    return state.zone >= Config.REKINDLE_MIN_ZONE && Souls.embersFromRun(state) > 0;
   },
 
   // Rekindle: burn the run for Embers. Keeps: embers, patrons, gods, marks,
   // records, steward. Wipes: gold, heroes, upgrades, zone, run bookkeeping.
   rekindle(state: GameState): number {
     if (!Souls.canRekindle(state)) return 0;
-    // A Rekindling always pays at least one Ember: the first meta-loop beat
-    // must land even before any Revenant falls.
-    const gained = Math.max(1, Souls.embersFromRun(state));
+    const gained = Souls.embersFromRun(state);
+    if (gained <= 0) return 0;
     state.embers += gained;
     state.embers_lifetime += gained;
     state.rekindles++;
+    // ground down to here is paid for; only deeper counts next run
+    state.paid_zone = Math.max(state.paid_zone, state.frontier_zone);
     resetRun(state);
     state.seed_revenant = nextSeed(state.seed_revenant);
     return gained;

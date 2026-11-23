@@ -80,7 +80,11 @@ export class Scene {
     this.button(
       ctx,
       r,
-      can ? `REKINDLE  +${Format.number(gain)}✦` : `Rekindle at zone ${Config.REKINDLE_MIN_ZONE}`,
+      can
+        ? `REKINDLE  +${Format.number(gain)}✦`
+        : gain > 0
+          ? `Rekindle at zone ${Config.REKINDLE_MIN_ZONE}`
+          : "Push deeper to Rekindle",
       can,
       () => game.rekindle(),
     );

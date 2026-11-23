@@ -88,7 +88,7 @@ const Config = {
   HP_OLD_GROWTH_EARLY: 1.6, // steeper curve feeding gold
   HP_OLD_GROWTH_LATE: 1.15,
 
-  GOLD_HP_DIV: 6,
+  GOLD_HP_DIV: 15, // gold = old-curve HP ÷ this (the reference game's divisor)
   GOLD_EARLY_SLOPE: 0.05, // pre-act gold boost: 1 + slope·(end − zone)
   GOLD_EARLY_END: 40,
   GOLD_FACTOR_RATE: 1.025,
@@ -96,6 +96,7 @@ const Config = {
   GOLD_FACTOR_CAP: 3,
 
   ZONE_KILLS: 10,
+  ZONE_KILLS_DEEP: 0.1, // +this kills per zone, every HP_DEEP_PER zones
   ZONE_KILLS_FLOOR: 4,
   RESPAWN_DELAY: 0.5,
   RESPAWN_FLOOR: 0.2,
@@ -154,8 +155,9 @@ const Config = {
 
   // ── embers / rekindling ───────────────────────────────────────────────
   EMBER_LEVEL_DIVISOR: 1000, // levels bought this run ÷ this = Embers
+  EMBER_ZONE_DIVISOR: 12, // +1 Ember per 12 zones of NEW ground
   EMBER_IDLE_BONUS: 0.1, // +10% DPS per unspent Ember
-  REKINDLE_MIN_ZONE: 30,
+  REKINDLE_MIN_ZONE: 60,
   RESPEC_REFUND: 0.75,
 
   // ── revenant bosses ───────────────────────────────────────────────────
@@ -191,6 +193,9 @@ const Config = {
 
   // ── the road (travel + hold) ───────────────────────────────────────────
   ROAD_WINDOW: 12, // zones per page in the Road panel's zone list
+  // A walled run falls back to the deepest zone whose monster dies inside
+  // this many seconds, so a boss you cannot kill never freezes gold income.
+  FARM_KILL_SECONDS: 2,
 
   // ── content: heroes (hire ladder anchored ~8× gold at home zone, DPS
   //    anchored to 5% of home-zone monster HP; see DESIGN.md) ─────────────

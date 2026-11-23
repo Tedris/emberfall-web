@@ -97,6 +97,9 @@ export class Save {
     state.frontier_zone = Math.max(state.frontier_zone, state.zone);
     if (typeof s.auto_advance !== "boolean") state.auto_advance = true;
     if (typeof s.zone_cleared !== "boolean") state.zone_cleared = false;
+    // Embers used to pay for any run; for saves that predate the zone ladder
+    // it starts already spent down to the deepest zone ever walked.
+    if (typeof s.paid_zone !== "number") state.paid_zone = state.best_zone ?? 0;
     return { state, saved_at: parsed.t ?? null, from_backup, fresh: false };
   }
 

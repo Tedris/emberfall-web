@@ -13,11 +13,17 @@ simulated on return (capped, with a report).
 
 - The first run starts with **nobody hired**: the first monsters fall to taps,
   and that gold hires the Company. (After a Rekindling the Company restarts
-  assembled, so idle play never dead-ends.)
+  assembled, so idle play never dead-ends.) Tempo follows Clicker Heroes —
+  hands-off play reaches about zone 34 in an hour, and a watched hour with a
+  thumb on the glass about zone 40.
 - **Road** tab: travel to any zone you have reached, see what standing there
   pays, and choose between *hold* (keep farming the cleared zone) and *go
   deeper*. `Auto-advance` is yours to set — the game never changes it under
   you, and holding a zone can never set you back a zone.
+- A boss you cannot kill yet is a wall, not a loss: the road falls back to
+  ground you can still sweep, keeps earning, and walks into the wall again once
+  you have grown. **Rekindle** (from zone 60) pays Embers only for ground that
+  has not been sold already, so a reset is a bet on going deeper.
 
 ## Save & reset
 

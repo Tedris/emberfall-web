@@ -6,16 +6,16 @@ import Patrons from "../src/systems/patrons";
 import Godsfall from "../src/systems/godsfall";
 
 describe("souls / rekindling", () => {
-  it("embers = levels/1000 + revenant", () => {
+  it("embers = levels/1000 + revenant + new ground", () => {
     const s = createState();
     s.levels_bought_run = 9000;
     s.revenant_souls_run = 3;
     expect(Souls.embersFromRun(s)).toBe(12);
   });
 
-  it("rekindle blocked below zone 30, wipes the run, keeps embers/patrons", () => {
+  it("rekindle blocked below the zone gate, wipes the run, keeps embers/patrons", () => {
     const s = createState();
-    s.zone = 29;
+    s.zone = 59;
     s.levels_bought_run = 5000;
     expect(Souls.rekindle(s)).toBe(0);
     s.zone = 100;
@@ -34,6 +34,26 @@ describe("souls / rekindling", () => {
       ),
     ).toBe(true);
     expect(s.patrons["vessa"]).toBe(5);
+  });
+
+  it("only NEW ground pays Embers: a road already burned pays nothing again", () => {
+    const s = createState();
+    s.zone = 84;
+    s.frontier_zone = 84;
+    s.levels_bought_run = 1000;
+    expect(Souls.embersFromRun(s)).toBe(1 + 7); // levels + floor(84 / 12)
+    expect(Souls.rekindle(s)).toBe(8);
+    expect(s.paid_zone).toBe(84);
+    // re-walking the same road buys nothing
+    s.zone = 84;
+    s.frontier_zone = 84;
+    expect(Souls.embersFromRun(s)).toBe(0);
+    expect(Souls.canRekindle(s)).toBe(false);
+    expect(Souls.rekindle(s)).toBe(0);
+    // deeper ground pays again
+    s.frontier_zone = 96;
+    expect(Souls.embersFromRun(s)).toBe(1);
+    expect(Souls.canRekindle(s)).toBe(true);
   });
 
   it("revenant roll: always at 100/110/120 and hundreds, never below 100", () => {

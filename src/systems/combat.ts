@@ -85,7 +85,7 @@ export const Combat = {
         state.boss_timer -= step;
         dt -= step;
         if (state.boss_timer <= 0) {
-          Combat.onBossFail(state);
+          Combat.onBossFail(state, der);
           ev.boss_failed = true;
           break;
         }
@@ -134,9 +134,11 @@ export const Combat = {
     }
   },
 
-  onBossFail(state: GameState) {
-    // Back off one zone and farm; the wall stays until DPS grows.
-    state.zone = Math.max(1, state.zone - 1);
+  onBossFail(state: GameState, d: Derived) {
+    // Fall back to ground the Company can still sweep. The wall keeps the zone
+    // until DPS grows, but the road walks forward from here, so a boss you
+    // cannot kill yet never freezes the gold that will eventually kill it.
+    state.zone = Zones.farmZone(Effects.totalDps(state, d, state.overdrive_gauge), state.zone);
     state.kills_in_zone = 0;
     state.zone_cleared = false;
     state.streak_letdown = true;

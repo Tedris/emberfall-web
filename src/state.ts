@@ -62,6 +62,7 @@ export interface GameState {
   // records
   best_zone: number;
   best_zone_god: number; // post-godsfall best
+  paid_zone: number; // deepest zone the Ember ladder has already paid for
   best_gold: number;
   best_dps: number;
   clicks: number;
@@ -128,6 +129,7 @@ export function createState(now = 0): GameState {
     gods: {},
     best_zone: 0,
     best_zone_god: 0,
+    paid_zone: 0,
     best_gold: 0,
     best_dps: 0,
     clicks: 0,

@@ -32,11 +32,11 @@ export const Offline = {
     // The road holds while you sleep: with auto-advance off nothing advances
     // offline — you farm the zone you are standing on, at the same rate you
     // would with the tab open. Standing on an uncleared boss zone means that
-    // boss beat you, so the neighbours one zone back are what pay.
+    // boss beat you, so the deepest ground you can still sweep is what pays.
     if (!state.auto_advance) {
       const farm_z =
         Zones.isBossZone(state.zone) && !state.zone_cleared
-          ? Math.max(1, state.zone - 1)
+          ? Zones.farmZone(dps, state.zone)
           : state.zone;
       const cycle = Zones.monsterHp(farm_z, false) / dps + Zones.respawnDelay(d.respawn);
       const held_kills = Math.floor(budget / cycle);
@@ -67,7 +67,7 @@ export const Offline = {
         const timer = Zones.bossTimer(z, d.boss_timer);
         if (kill_time > timer) {
           // Farm this zone's normal neighbours for the remaining time.
-          const farm_zone = z - 1 > 0 ? z - 1 : 1;
+          const farm_zone = Zones.farmZone(dps, z);
           const farm_hp = Zones.monsterHp(farm_zone, false);
           const rate = 1 / (farm_hp / dps + respawn);
           const n = Math.floor(t * rate);

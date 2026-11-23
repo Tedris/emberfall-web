@@ -85,7 +85,30 @@ export const Zones = {
   },
 
   killsNeeded(z: number, minus: number): number {
-    return Math.max(Config.ZONE_KILLS - Math.floor(minus), Config.ZONE_KILLS_FLOOR);
+    // the road gets denser with depth, not only more health
+    const want =
+      Config.ZONE_KILLS + Config.ZONE_KILLS_DEEP * Math.floor(z / Config.HP_DEEP_PER) - minus;
+    return Math.max(Math.round(want), Config.ZONE_KILLS_FLOOR);
+  },
+
+  // Where a walled run grinds: the deepest zone at or below `ceiling` whose
+  // ordinary monster dies inside FARM_KILL_SECONDS. Boss zones are skipped —
+  // farming a timer is how you lose a zone in the reference game, and here.
+  farmZone(dps: number, ceiling: number): number {
+    const hi = Math.max(1, Math.floor(ceiling));
+    const fast = dps * Config.FARM_KILL_SECONDS;
+    if (Zones.monsterHp(1, false) > fast) return Zones.isBossZone(hi) ? hi - 1 || 1 : hi;
+    let lo = 1,
+      top = hi,
+      best = 1;
+    while (lo <= top) {
+      const mid = (lo + top) >> 1;
+      if (Zones.monsterHp(mid, false) <= fast) {
+        best = mid;
+        lo = mid + 1;
+      } else top = mid - 1;
+    }
+    return Zones.isBossZone(best) ? best - 1 : best;
   },
 
   bossTimer(z: number, bonus: number): number {

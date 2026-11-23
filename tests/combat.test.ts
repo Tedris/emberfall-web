@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import Config from "../src/config";
 import { createState } from "../src/state";
 import Combat from "../src/systems/combat";
 import Clicker from "../src/systems/clicker";
@@ -27,19 +28,26 @@ describe("combat", () => {
     expect(ev).toBeDefined();
   });
 
-  it("boss zone spawns with 10x hp and a live timer; timeout backs off one zone", () => {
+  it("a failed boss drops the road to ground it can still sweep", () => {
     const s = armed();
-    s.zone = 10;
+    s.zone = 60;
+    s.frontier_zone = 60;
     const d = Effects.derive(s);
     Combat.spawn(s, d);
     expect(s.monster_is_boss).toBe(true);
     expect(s.boss_timer).toBeGreaterThan(0);
-    s.heroes["cinderroot"].level = 1; // too weak
-    s.monster_hp = Zones.hpBase(10) * 10 * 1000; // unkillable
-    const before = s.zone;
+    s.monster_hp = Zones.hpBase(60) * 10 * 1000; // unkillable at this DPS
     Combat.tick(s, 60, d);
-    expect(s.zone).toBe(before - 1);
+    const dps = Effects.totalDps(s, d, 0);
     expect(s.streak_letdown).toBe(true);
+    expect(s.zone).toBeLessThan(60);
+    expect(Zones.isBossZone(s.zone)).toBe(false); // never parked on a timer
+    // the ground it lands on dies inside the farming window...
+    expect(Zones.monsterHp(s.zone, false)).toBeLessThanOrEqual(dps * Config.FARM_KILL_SECONDS);
+    // ...and the next zone up does not, so no better ground was skipped
+    expect(Zones.monsterHp(s.zone + 1, false)).toBeGreaterThan(dps * Config.FARM_KILL_SECONDS);
+    // falling back never costs a zone: the frontier still owns everything
+    expect(s.frontier_zone).toBe(60);
   });
 
   it("clearing a normal zone advances exactly one zone per 10 kills", () => {
